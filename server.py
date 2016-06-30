@@ -1,73 +1,56 @@
 # Vincent Popie
 
-import sys
 import socket
-import select
-import time
-import data_generation
-
+import struct
 
 class Server:
 
-    def __init__(self, port=1280, target_coord=(10, 10), nb_stations=4):
-        self.host = ''
-        self.port = port
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    def __init__(self):
+        self.serversock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_launch = False
         self.connected_client = []
 
-        self.nb_stations = nb_stations
-        self.target_coord = target_coord
-        self.data = data_generation.GenerateData(self.nb_stations,
-                                                 self.target_coord)
-
-    def launch(self):
-        self.sock.bind((self.host, self.port))
-        self.sock.listen(5)
+    def launch(self, port):
+        self.serversock.bind((socket.gethostbyname(socket.gethostname()), port))
+        self.serversock.listen(5)
         self.server_launch = True
 
-    def run(self):
-        try:
-            while self.server_launch:
-                asked_connections, wlist, xlist = select.select([self.sock],
-                                                                [], [], 0.05)
+    def mysend(self, msg, client):
+        msg = struct.pack('>I', len(msg)) + msg
+        totalsent = 0
+        MSGLEN = len(msg)
+        while totalsent < MSGLEN:
+            sent = client.send(msg[totalsent:])
+            if sent == 0:
+                raise RuntimeError("Socket connection broken")
+            totalsent += sent
 
-                for connection in asked_connections:
-                    client_connection, info_connection = connection.accept()
-                    self.connected_client.append(client_connection)
+    def myreceive(self, client):
+        # data lenth is packed into 4 bytes
+        chunks = []
+        bytes_recd = 0
+        SIZE_DATA_LENGTH = 4
 
-                    msg = self.data.convert_stations_coord()
-                    client_connection.send(msg.encode())
+        while bytes_recd < SIZE_DATA_LENGTH:
+            chunk = client.recv(min(SIZE_DATA_LENGTH, 2048))
+            if chunk == b'':
+                raise RuntimeError("socket connection broken")
+            chunks.append(chunk)
+            bytes_recd += len(chunk)
 
-                for client in self.connected_client:
-                    msg = self.data.convert_time_diff()
-                    try:
-                        client.send(msg.encode())
-                    except ConnectionResetError:
-                        client.close()
-                        self.connected_client.remove(client)
-                time.sleep(1)
-        except KeyboardInterrupt:
-            self.server_launch = False
+        data = b''.join(chunks[:SIZE_DATA_LENGTH])
+        MSGLEN = struct.unpack('>I', data)[0]
 
-        print("Connection closed")
-        self.sock.close()
+        bytes_recd -= SIZE_DATA_LENGTH
+        chunks = chunks[SIZE_DATA_LENGTH:]
 
-if __name__ == '__main__':
-    if len(sys.argv) == 1:
-        my_server = Server()
-    elif len(sys.argv) < 4:
-        port = int(sys.argv[1])
-        my_server = Server(port)
-    elif len(sys.argv) == 4:
-        port = int(sys.argv[1])
-        target_coord = [float(sys.argv[2]), float(sys.argv[3])]
-        my_server = Server(port, target_coord)
-    else:
-        port = int(sys.argv[1])
-        target_coord = [float(sys.argv[2]), float(sys.argv[3])]
-        nb_stations = int(sys.argv[4])
-        my_server = Server(port, target_coord, nb_stations)
+        while bytes_recd < MSGLEN:
+            chunk = self.serversock.recv(min(MSGLEN - bytes_recd, 2048))
+            if chunk == b'':
+                raise RuntimeError("socket connection broken")
+            chunks.append(chunk)
+            bytes_recd += len(chunk)
+        return b''.join(chunks)
 
-    my_server.launch()
-    my_server.run()
+
+

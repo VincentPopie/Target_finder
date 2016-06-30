@@ -35,13 +35,14 @@ class Client:
         SIZE_DATA_LENGTH = 4
 
         while bytes_recd < SIZE_DATA_LENGTH:
-            chunk = self.sock.recv((SIZE_DATA_LENGTH, 2048))
+            chunk = self.sock.recv(min(SIZE_DATA_LENGTH, 2048))
             if chunk == b'':
                 raise RuntimeError("socket connection broken")
             chunks.append(chunk)
             bytes_recd += len(chunk)
 
-        MSGLEN = struct.unpack('>I', chunks[:SIZE_DATA_LENGTH])[0]
+        data = b''.join(chunks[:SIZE_DATA_LENGTH])
+        MSGLEN = struct.unpack('>I', data)[0]
 
         bytes_recd -= SIZE_DATA_LENGTH
         chunks = chunks[SIZE_DATA_LENGTH:]

@@ -1,6 +1,6 @@
 # Vincent Popie
 
-import numpy as np
+import math
 import json
 
 
@@ -41,13 +41,13 @@ class GenerateData:
     def compute_stations_coord(self):
         for i in range(0, self.nb_stations):
             theta = float(i / self.nb_stations)
-            x = np.cos(2 * np.pi * theta)
-            y = np.sin(2 * np.pi * theta)
+            x = math.cos(2 * math.pi * theta)
+            y = math.sin(2 * math.pi * theta)
             self.stations_coord.append(Station(x, y))
 
     def compute_propagation_time(self):
         for stations in self.stations_coord:
-            t = np.sqrt((stations.x - self.target_coord.x) ** 2 +
+            t = math.sqrt((stations.x - self.target_coord.x) ** 2 +
                         (stations.y - self.target_coord.y) ** 2) / self.light_speed
             self.propagation_time.append(t)
 
