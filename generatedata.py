@@ -40,7 +40,7 @@ class GenerateData:
 
     def compute_stations_coord(self):
         for i in range(0, self.nb_stations):
-            theta = float(i / self.nb_stations)
+            theta = float(i) / float(self.nb_stations)
             x = math.cos(2 * math.pi * theta)
             y = math.sin(2 * math.pi * theta)
             self.stations_coord.append(Station(x, y))

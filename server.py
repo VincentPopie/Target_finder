@@ -11,7 +11,7 @@ class Server:
         self.connected_client = []
 
     def launch(self, port):
-        self.serversock.bind((socket.gethostbyname(socket.gethostname()), port))
+        self.serversock.bind(('', port))
         self.serversock.listen(5)
         self.server_launch = True
 
