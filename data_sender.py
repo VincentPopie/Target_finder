@@ -2,7 +2,7 @@ import sys
 import server
 import select
 import time
-import data_generation
+import generatedata
 
 if __name__ == '__main__':
     port = int(sys.argv[1])
@@ -11,7 +11,7 @@ if __name__ == '__main__':
 
     my_server = server.Server()
 
-    my_data = data_generation.GenerateData(nb_stations, target_coord)
+    my_data = generatedata.GenerateData(nb_stations, target_coord)
 
     my_server.launch(port)
 
