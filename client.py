@@ -1,53 +1,55 @@
 # Vincent Popie
 
-import sys
 import socket
-import json
-import find_target_location
+import struct
 
 
 class Client:
-    def __init__(self, host="localhost", port=1280):
-        self.host = host
-        self.port = port
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.exe = True
+    def __init__(self, sock=None):
+        if sock is None:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        else:
+            self.sock = sock
 
-    def connect(self):
-        self.sock.connect((self.host, self.port))
+    def connect(self, host, port):
+        self.sock.connect((host, port))
 
-    def receive(self):
-        msg_received = self.sock.recv(1024)
-        msg = msg_received.decode()
-        stations_coord = json.loads(msg)
-        try:
-            while self.exe:
-                msg_received = self.sock.recv(1024)
-                msg = msg_received.decode()
-                time_diff = json.loads(msg)
+    def close(self):
+        self.sock.close()
 
-                find_target = find_target_location.FindTarget(stations_coord, time_diff)
-                target_coord = find_target.find_target_coord()
-                print('Target coordinates : x = {0}, y = {1}'.format(target_coord[0], target_coord[1]))
+    def mysend(self, msg):
+        msg = struct.pack('>I', len(msg)) + msg
+        totalsent = 0
+        MSGLEN = len(msg)
+        while totalsent < MSGLEN:
+            sent = self.sock.send(msg[totalsent:])
+            if sent == 0:
+                raise RuntimeError("Socket connection broken")
+            totalsent += sent
 
-        except KeyboardInterrupt:  # Does not catch Ctrl-C because of scipy
-            self.exe = False
-            self.sock.close()
-            print("Connection closed")
+    def myreceive(self):
+        # data lenth is packed into 4 bytes
 
+        chunks = []
+        bytes_recd = 0
+        SIZE_DATA_LENGTH = 4
 
-if __name__ == '__main__':
-    if len(sys.argv) == 2:
-        host = str(sys.argv[1])
-        my_client = Client(host)
+        while bytes_recd < SIZE_DATA_LENGTH:
+            chunk = self.sock.recv((SIZE_DATA_LENGTH, 2048))
+            if chunk == b'':
+                raise RuntimeError("socket connection broken")
+            chunks.append(chunk)
+            bytes_recd += len(chunk)
 
-    elif len(sys.argv) > 2:
-        host = str(sys.argv[1])
-        port = int(sys.argv[2])
-        my_client = Client(host, port)
+        MSGLEN = struct.unpack('>I', chunks[:SIZE_DATA_LENGTH])[0]
 
-    else:
-        my_client = Client()
+        bytes_recd -= SIZE_DATA_LENGTH
+        chunks = chunks[SIZE_DATA_LENGTH:]
 
-    my_client.connect()
-    my_client.receive()
+        while bytes_recd < MSGLEN:
+            chunk = self.sock.recv(min(MSGLEN - bytes_recd, 2048))
+            if chunk == b'':
+                raise RuntimeError("socket connection broken")
+            chunks.append(chunk)
+            bytes_recd += len(chunk)
+        return b''.join(chunks)
