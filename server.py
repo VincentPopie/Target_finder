@@ -3,6 +3,7 @@
 import socket
 import struct
 
+
 class Server:
 
     def __init__(self):
@@ -18,18 +19,17 @@ class Server:
     def mysend(self, msg, client):
         msg = struct.pack('>I', len(msg)) + msg
         totalsent = 0
-        MSGLEN = len(msg)
-        while totalsent < MSGLEN:
+        while totalsent < len(msg):
             sent = client.send(msg[totalsent:])
             if sent == 0:
                 raise RuntimeError("Socket connection broken")
             totalsent += sent
 
     def myreceive(self, client):
-        # data lenth is packed into 4 bytes
+        # data length is packed into 4 bytes
+        SIZE_DATA_LENGTH = 4
         chunks = []
         bytes_recd = 0
-        SIZE_DATA_LENGTH = 4
 
         while bytes_recd < SIZE_DATA_LENGTH:
             chunk = client.recv(min(SIZE_DATA_LENGTH, 2048))
@@ -39,18 +39,15 @@ class Server:
             bytes_recd += len(chunk)
 
         data = b''.join(chunks[:SIZE_DATA_LENGTH])
-        MSGLEN = struct.unpack('>I', data)[0]
+        msg_len = struct.unpack('>I', data)[0]
 
         bytes_recd -= SIZE_DATA_LENGTH
         chunks = chunks[SIZE_DATA_LENGTH:]
 
-        while bytes_recd < MSGLEN:
-            chunk = self.serversock.recv(min(MSGLEN - bytes_recd, 2048))
+        while bytes_recd < msg_len:
+            chunk = self.serversock.recv(min(msg_len - bytes_recd, 2048))
             if chunk == b'':
                 raise RuntimeError("socket connection broken")
             chunks.append(chunk)
             bytes_recd += len(chunk)
         return b''.join(chunks)
-
-
-

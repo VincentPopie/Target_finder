@@ -1,4 +1,10 @@
-# Vincent Popie
+# author : Vincent Popie
+# Warning : created for Python3.x (division between 2 ints)
+
+"""
+Generate fictive data to test the algorithm to find target coordinates
+
+"""
 
 import math
 import json
@@ -24,6 +30,12 @@ class TimeDifference:
 
 class GenerateData:
     def __init__(self, nb_stations, target_coord):
+        """
+        Generate fictive data to test the algorithm to find target coordinates
+
+        :param nb_stations: number of stations
+        :param target_coord: coordinates of the target
+        """
         self.light_speed = 299792.458
 
         self.nb_stations = nb_stations
@@ -39,19 +51,35 @@ class GenerateData:
         self.compute_time_diff()
 
     def compute_stations_coord(self):
+        """
+        Compute the coordinates of the different stations
+        The stations are distributed on the unit circle
+
+        :return: a list with the stations coordinates
+        """
         for i in range(0, self.nb_stations):
-            theta = float(i) / float(self.nb_stations)
+            theta = i / self.nb_stations
             x = math.cos(2 * math.pi * theta)
             y = math.sin(2 * math.pi * theta)
             self.stations_coord.append(Station(x, y))
 
     def compute_propagation_time(self):
+        """
+        :return: the propagation time between the target and a station
+        """
         for stations in self.stations_coord:
-            t = math.sqrt((stations.x - self.target_coord.x) ** 2 +
-                        (stations.y - self.target_coord.y) ** 2) / self.light_speed
+            d = math.sqrt((stations.x - self.target_coord.x) ** 2 +
+                          (stations.y - self.target_coord.y) ** 2)
+            t = d / self.light_speed
             self.propagation_time.append(t)
 
     def compute_time_diff(self):
+        """
+        Compute the propagation time difference between the target and each
+        station
+
+        :return: a list of TimeDifference
+        """
         for i in range(0, self.nb_stations):
             for j in range(i + 1, self.nb_stations):
                 diff = self.propagation_time[i] - self.propagation_time[j]
